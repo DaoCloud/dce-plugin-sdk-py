@@ -4,8 +4,7 @@
 
 ## Requirements
 
-- Python 2.7 or greater
-- Under Python 3
+- Python 2.7.*
 
 ## Installation
 
