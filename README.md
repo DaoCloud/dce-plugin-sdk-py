@@ -37,7 +37,7 @@ config = {
 }
 
 saved = sdk.set_config(config)
-retrived = sdk.get_config(config)
+retrived = sdk.get_config()
 ```
 
 
