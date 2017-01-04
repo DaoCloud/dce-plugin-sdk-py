@@ -1,6 +1,6 @@
 # dce-plugin-sdk-py
 
-> DCE plugin SDK for Python.
+DCE plugin SDK for Python.
 
 ## Requirements
 
