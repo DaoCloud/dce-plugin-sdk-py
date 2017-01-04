@@ -10,6 +10,8 @@ from .docker_client import DockerException
 
 __all__ = ['PluginSDK', 'PluginSDKException']
 
+CONFIG_MAX_SIZE = 1024 * 1024
+
 
 class PluginSDKException(Exception):
     pass
@@ -79,6 +81,8 @@ class PluginSDK(object):
 
     def set_config(self, config):
         data = json.dumps(config)
+        if len(data) > CONFIG_MAX_SIZE:
+            raise PluginSDKException("config should not bigger than 1MB")
 
         storage_url = self._plugin_storage_url()
         response = urllib2.urlopen(
