@@ -5,13 +5,10 @@ import ssl
 import urllib2
 import urlparse
 
-from .docker_client import DockerClient
-from .docker_client import DockerException
-
 __all__ = ['PluginSDK', 'PluginSDKException']
 
 CONFIG_MAX_SIZE = 1024 * 1024
-
+DCE_CONTROLLER_DB_PATH = os.getenv('DCE_MANAGER_DB_PATH') or '/var/local/dce/controller.db'
 
 class PluginSDKException(Exception):
     pass
@@ -19,34 +16,19 @@ class PluginSDKException(Exception):
 
 class PluginSDK(object):
     def __init__(self, base_url=None, timeout=None):
-        self.docker_client = DockerClient(base_url=base_url, timeout=timeout)
 
     def _detect_host_ip(self):
-        info = self.docker_client.info()
-        host_ip = info.get('Swarm', {}).get('NodeAddr')
-        if not host_ip:
-            raise PluginSDKException("Detect node address failed")
-
-        return host_ip
+        with open(DCE_CONTROLLER_DB_PATH) as f:
+            controller_ips = [l.strip() for l in f.readlines()]
+        return controller_ips［0］
 
     def _detect_dce_ports(self):
         """
         :return: (swarm_port, controller_port, controller_ssl_port)
         """
-        dce_base = self.docker_client.service_inspect('dce_base')
-        environments = dce_base.get('Spec', {}).get('TaskTemplate', {}).get('ContainerSpec', {}).get('Env', [])
-        environments = dict(
-            [e.split('=', 1) for e in environments if '=' in e]
-        )
-        (swarm_port, controller_port, controller_ssl_port) = (
-            environments.get('SWARM_PORT'),
-            environments.get('CONTROLLER_PORT'),
-            environments.get('CONTROLLER_SSL_PORT')
-        )
-        if not (swarm_port and controller_port and controller_ssl_port):
-            raise PluginSDKException("Detect DCE ports failed")
-
-        ports = int(swarm_port), int(controller_port), int(controller_ssl_port)
+        controller_port = os.getenv('CONTROLLER_EXPORTED_PORT') or 80
+        controller_ssl_port = os.getenv('CONTROLLER_SSL_EXPORTED_PORT') or 443
+        ports = int(controller_port), int(controller_ssl_port)
 
         return ports
 
@@ -56,7 +38,7 @@ class PluginSDK(object):
             raise PluginSDKException("Environment variable `DCE_PLUGIN_STORAGE_URL` is missed")
 
         host_ip = self._detect_host_ip()
-        _, controller_port, controller_ssl_port = self._detect_dce_ports()
+        controller_port, controller_ssl_port = self._detect_dce_ports()
         config = {
             'DCE_HOST': host_ip,
             'DCE_PORT': controller_ssl_port
