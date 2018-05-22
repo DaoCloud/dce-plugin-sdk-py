@@ -15,12 +15,13 @@ class PluginSDKException(Exception):
 
 
 class PluginSDK(object):
-    def __init__(self, base_url=None, timeout=None):
+    def __init__(self):
+        pass
 
     def _detect_host_ip(self):
         with open(DCE_CONTROLLER_DB_PATH) as f:
             controller_ips = [l.strip() for l in f.readlines()]
-        return controller_ips［0］
+        return controller_ips[0]
 
     def _detect_dce_ports(self):
         """
