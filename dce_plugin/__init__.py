@@ -8,7 +8,7 @@ import urlparse
 __all__ = ['PluginSDK', 'PluginSDKException']
 
 CONFIG_MAX_SIZE = 1024 * 1024
-DCE_CONTROLLER_DB_PATH = os.getenv('DCE_MANAGER_DB_PATH') or '/var/local/dce/controller.db'
+DCE_CONTROLLER_DB_PATH = os.getenv('DCE_MANAGER_DB_PATH') or '/var/local/dce/engine/controller.db'
 
 class PluginSDKException(Exception):
     pass
