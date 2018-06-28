@@ -76,6 +76,7 @@ class PluginSDK(object):
         req = urllib2.Request(safe_url, data=data)
         req.add_header('Authorization', 'Basic {}'.format(auth))
         req.add_header('Content-Type', 'application/json')
+        req.add_header('x-dce-request-method', method)
         req.get_method = lambda: method
         return req
 
