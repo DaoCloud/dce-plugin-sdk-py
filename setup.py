@@ -10,7 +10,7 @@ install_requires = []
 
 setup(
     name="dce-plugin-sdk",
-    version='0.1',
+    version='1.1.0',
     description="DCE plugin SDK for Python.",
     url='https://github.com/DaoCloud/dce-plugin-sdk-py',
     packages=['dce_plugin'],
