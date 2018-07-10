@@ -1,3 +1,5 @@
+# encoding=utf-8
+
 import base64
 import json
 import os
@@ -22,21 +24,28 @@ class PluginSDK(object):
         self.docker_client = DockerClient(base_url=base_url, timeout=timeout)
         pass
 
+    # since 3.0
+    def _detect_controller_ips(self):
+        try:
+            with open(DCE_CONTROLLER_DB_PATH) as f:
+                controller_ips = [l.strip() for l in f.readlines()]
+        except IOError:
+            return []
+        return controller_ips
+
+    # 2.6-2.10 使用，检测当前主机 IP，插件一定部署在控制节点，因此相当于获取控制节点 IP。
+    # 3.0 直接读取本地的 controller.db 文件获取控制节点 IP
     def _detect_host_ip(self):
-        # DCE 2.6 - 2.10 is using docker swarmkit
+        controler_ips = self._detect_controller_ips()
+        if controler_ips:
+            return controler_ips[0]
+
+        # DCE 2.6 - 2.10 is using docker swarmkit, and plugins have to run on manager, so use host ip
         info = self.docker_client.info()
         host_ip = info.get('Swarm', {}).get('NodeAddr')
         if host_ip:
            return host_ip
-
-        # since DCE 3.0, controller ips are save in local db file.
-        try:
-            with open(DCE_CONTROLLER_DB_PATH) as f:
-                controller_ip = f.readline().strip()
-        except IOError:
-            raise PluginSDKException("Detect node address failed")
-        if controller_ip:
-            return controller_ip
+        raise PluginSDKException("Detect node address failed")
 
     def _detect_dce_ports(self):
         """
