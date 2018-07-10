@@ -5,32 +5,66 @@ import ssl
 import urllib2
 import urlparse
 
+from .docker_client import DockerClient
+
 __all__ = ['PluginSDK', 'PluginSDKException']
 
 CONFIG_MAX_SIZE = 1024 * 1024
 DCE_CONTROLLER_DB_PATH = os.getenv('DCE_CONTROLLER_DB_PATH') or '/var/local/dce/engine/controller.db'
+
 
 class PluginSDKException(Exception):
     pass
 
 
 class PluginSDK(object):
-    def __init__(self):
+    def __init__(self, base_url=None, timeout=None):
+        self.docker_client = DockerClient(base_url=base_url, timeout=timeout)
         pass
 
     def _detect_host_ip(self):
-        with open(DCE_CONTROLLER_DB_PATH) as f:
-            controller_ips = [l.strip() for l in f.readlines()]
-        return controller_ips[0]
+        # DCE 2.6 - 2.10 is using docker swarmkit
+        info = self.docker_client.info()
+        host_ip = info.get('Swarm', {}).get('NodeAddr')
+        if host_ip:
+           return host_ip
+
+        # since DCE 3.0, controller ips are save in local db file.
+        try:
+            with open(DCE_CONTROLLER_DB_PATH) as f:
+                controller_ip = f.readline().strip()
+        except IOError:
+            raise PluginSDKException("Detect node address failed")
+        if controller_ip:
+            return controller_ip
 
     def _detect_dce_ports(self):
         """
         :return: (swarm_port, controller_port, controller_ssl_port)
         """
-        controller_port = os.getenv('CONTROLLER_EXPORTED_PORT') or 80
-        controller_ssl_port = os.getenv('CONTROLLER_SSL_EXPORTED_PORT') or 443
-        ports = int(controller_port), int(controller_ssl_port)
+        info = self.docker_client.info()
+        node_swarm_state = info.get('Swarm', {}).get('LocalNodeState')
+        # for DCE 3.0, swarm is inactive
+        if node_swarm_state is "inactive":
+            controller_port = os.getenv('CONTROLLER_EXPORTED_PORT') or 80
+            controller_ssl_port = os.getenv('CONTROLLER_SSL_EXPORTED_PORT') or 443
+            return None, int(controller_port), int(controller_ssl_port)
 
+        # DCE 2.6 - 2.10 is using docker swarmkit
+        dce_base = self.docker_client.service_inspect('dce_base')
+        environments = dce_base.get('Spec', {}).get('TaskTemplate', {}).get('ContainerSpec', {}).get('Env', [])
+        environments = dict(
+            [e.split('=', 1) for e in environments if '=' in e]
+        )
+        (swarm_port, controller_port, controller_ssl_port) = (
+            environments.get('SWARM_PORT') or 2375,
+            environments.get('CONTROLLER_PORT') or 80,
+            environments.get('CONTROLLER_SSL_PORT') or 443
+        )
+        if not (swarm_port and controller_port and controller_ssl_port):
+            raise PluginSDKException("Detect DCE ports failed")
+
+        ports = int(swarm_port), int(controller_port), int(controller_ssl_port)
         return ports
 
     def _plugin_storage_url(self):
@@ -39,7 +73,7 @@ class PluginSDK(object):
             raise PluginSDKException("Environment variable `DCE_PLUGIN_STORAGE_URL` is missed")
 
         host_ip = self._detect_host_ip()
-        controller_port, controller_ssl_port = self._detect_dce_ports()
+        _, controller_port, controller_ssl_port = self._detect_dce_ports()
         config = {
             'DCE_HOST': host_ip,
             'DCE_PORT': controller_ssl_port
