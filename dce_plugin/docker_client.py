@@ -1,9 +1,9 @@
 import functools
-import httplib
+import http.client
 import json
 import os
 import socket
-import urlparse
+import urllib.parse
 from urllib import splitnport
 
 DEFAULT_TIMEOUT_SECONDS = 60
@@ -72,7 +72,7 @@ def parse_host(addr, is_win32=False, tls=False):
         host = address_parts[0]
         if len(address_parts) == 2:
             path = '/' + address_parts[1]
-        host, port = splitnport(host)
+        host, port = host.split(':')
 
         if port is None:
             raise DockerException(
@@ -93,10 +93,10 @@ def parse_host(addr, is_win32=False, tls=False):
     return "{0}://{1}:{2}{3}".format(proto, host, port, path).rstrip('/')
 
 
-class UnixHTTPConnection(httplib.HTTPConnection):
-    def __init__(self, socket_path, host=None, port=None, strict=None, timeout=None):
+class UnixHTTPConnection(http.client.HTTPConnection):
+    def __init__(self, socket_path, host=None, port=None, timeout=None):
         host = host or 'localhost'
-        httplib.HTTPConnection.__init__(self, host, port=port, strict=strict, timeout=timeout)
+        http.client.HTTPConnection.__init__(self, host, port=port, timeout=timeout)
         self.socket_path = socket_path
 
     def connect(self):
@@ -124,9 +124,9 @@ class DockerClient(object):
 
             self.conn_fac = functools.partial(UnixHTTPConnection, socket_path, timeout=timeout)
         elif self.base_url.startswith('http://'):
-            _, netloc, _, _, _, _ = urlparse.urlparse(self.base_url)
+            _, netloc, _, _, _, _ = urllib.parse.urllib.parse(self.base_url)
             host, port = netloc.split(':')
-            self.conn_fac = functools.partial(httplib.HTTPConnection, host, port=port, timeout=timeout)
+            self.conn_fac = functools.partial(http.client.HTTPConnection, host, port=port, timeout=timeout)
         else:
             raise DockerException(
                 "Invalid docker host: {}".format(self.base_url)

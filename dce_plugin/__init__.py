@@ -4,8 +4,8 @@ import base64
 import json
 import os
 import ssl
-import urllib2
-import urlparse
+import urllib.request
+import urllib.parse
 
 from .docker_client import DockerClient
 
@@ -93,13 +93,13 @@ class PluginSDK(object):
         return storage_url.format(**config)
 
     def _build_request(self, method, url, data=None):
-        parts = urlparse.urlparse(url)
+        parts = urllib.parse.urllib.parse(url)
 
         safe_parts = parts._replace(netloc='{}:{}'.format(parts.hostname, parts.port))
         safe_url = safe_parts.geturl()
         auth = base64.urlsafe_b64encode('{}:{}'.format(parts.username, parts.password))
 
-        req = urllib2.Request(safe_url, data=data)
+        req = urllib.request.Request(safe_url, data=data)
         req.add_header('Authorization', 'Basic {}'.format(auth))
         req.add_header('Content-Type', 'application/json')
         req.get_method = lambda: method
@@ -111,7 +111,7 @@ class PluginSDK(object):
             raise PluginSDKException("config should not bigger than 1MB")
 
         storage_url = self._plugin_storage_url()
-        response = urllib2.urlopen(
+        response = urllib.request.urlopen(
             self._build_request('PUT', storage_url, data),
             context=ssl._create_unverified_context()
         )
@@ -119,7 +119,7 @@ class PluginSDK(object):
 
     def get_config(self):
         storage_url = self._plugin_storage_url()
-        response = urllib2.urlopen(
+        response = urllib.request.urlopen(
             self._build_request('GET', storage_url),
             context=ssl._create_unverified_context()
         )
