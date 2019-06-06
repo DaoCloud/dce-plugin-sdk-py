@@ -6,6 +6,7 @@ import os
 import ssl
 import urllib2
 import urlparse
+import socket
 
 from .docker_client import DockerClient
 
@@ -112,18 +113,29 @@ class PluginSDK(object):
             raise PluginSDKException("config should not bigger than 1MB")
 
         storage_url = self._plugin_storage_url()
-        response = urllib2.urlopen(
-            self._build_request('PUT', storage_url, data),
-            context=ssl._create_unverified_context(),
-            timeout=TIMEOUT
-        )
-        return json.load(response)
+        try:
+            response = urllib2.urlopen(
+                self._build_request('PUT', storage_url, data),
+                context=ssl._create_unverified_context(),
+                timeout=TIMEOUT
+            )
+            return json.load(response)
+        except socket.timeout as e:
+            raise PluginSDKException("Timeout from DCE PluginSDK, %s" % e)
+        except Exception as e:
+            raise PluginSDKException("Except from DCE PluginSDK, %s" % e)
 
     def get_config(self):
         storage_url = self._plugin_storage_url()
-        response = urllib2.urlopen(
-            self._build_request('GET', storage_url),
-            context=ssl._create_unverified_context(),
-            timeout=TIMEOUT
-        )
-        return json.load(response)
+        try:
+            response = urllib2.urlopen(
+                self._build_request('GET', storage_url),
+                context=ssl._create_unverified_context(),
+                timeout=TIMEOUT
+            )
+            return json.load(response)
+        except socket.timeout as e:
+            raise PluginSDKException("Timeout from DCE PluginSDK, %s" % e)
+        except Exception as e:
+            raise PluginSDKException("Except from DCE PluginSDK, %s" % e)
+
