@@ -11,6 +11,7 @@ from .docker_client import DockerClient
 
 __all__ = ['PluginSDK', 'PluginSDKException']
 
+TIMEOUT = 10
 CONFIG_MAX_SIZE = 1024 * 1024
 DCE_CONTROLLER_DB_PATH = os.getenv('DCE_CONTROLLER_DB_PATH') or '/var/local/dce/engine/controller.db'
 
@@ -113,7 +114,8 @@ class PluginSDK(object):
         storage_url = self._plugin_storage_url()
         response = urllib2.urlopen(
             self._build_request('PUT', storage_url, data),
-            context=ssl._create_unverified_context()
+            context=ssl._create_unverified_context(),
+            timeout=TIMEOUT
         )
         return json.load(response)
 
@@ -121,6 +123,7 @@ class PluginSDK(object):
         storage_url = self._plugin_storage_url()
         response = urllib2.urlopen(
             self._build_request('GET', storage_url),
-            context=ssl._create_unverified_context()
+            context=ssl._create_unverified_context(),
+            timeout=TIMEOUT
         )
         return json.load(response)
