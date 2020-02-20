@@ -15,6 +15,8 @@ __all__ = ['PluginSDK', 'PluginSDKException']
 TIMEOUT = 10
 CONFIG_MAX_SIZE = 1024 * 1024
 DCE_CONTROLLER_DB_PATH = os.getenv('DCE_CONTROLLER_DB_PATH') or '/var/local/dce/engine/controller.db'
+LABEL_DCE_CONTROLLER_SERVICE_HOST = "DCE_CONTROLLER_SERVICE_HOST"
+LABEL_DCE_CONTROLLER_SERVICE_PORT = "DCE_CONTROLLER_SERVICE_PORT"
 
 
 class PluginSDKException(Exception):
@@ -28,6 +30,11 @@ class PluginSDK(object):
 
     # since 3.0
     def _detect_controller_ips(self):
+
+        # DCE version >= 3.1.5
+        env_host = os.getenv(LABEL_DCE_CONTROLLER_SERVICE_HOST)
+        if env_host:
+            return [env_host]
         try:
             with open(DCE_CONTROLLER_DB_PATH) as f:
                 controller_ips = [l.strip() for l in f.readlines()]
@@ -46,13 +53,19 @@ class PluginSDK(object):
         info = self.docker_client.info()
         host_ip = info.get('Swarm', {}).get('NodeAddr')
         if host_ip:
-           return host_ip
+            return host_ip
         raise PluginSDKException("Detect node address failed")
 
     def _detect_dce_ports(self):
         """
         :return: (swarm_port, controller_port, controller_ssl_port)
         """
+        # DCE version >= 3.1.5
+        env_port = os.getenv(LABEL_DCE_CONTROLLER_SERVICE_PORT)
+        if env_port:
+            # DCE 3.1.5 no longer need HTTP_PORT any more.
+            return 0, 0, int(env_port)
+
         info = self.docker_client.info()
         node_swarm_state = info.get('Swarm', {}).get('LocalNodeState')
         # for DCE 3.0, swarm is inactive
@@ -138,4 +151,3 @@ class PluginSDK(object):
             raise PluginSDKException("Timeout from DCE PluginSDK, %s" % e)
         except Exception as e:
             raise PluginSDKException("Except from DCE PluginSDK, %s" % e)
-
